@@ -23,7 +23,7 @@ Converts the hypergraph into a hierarchical graph compatible with PyTorch Geomet
 
 Defines and trains a transformer-based graph neural network (GNN). Supports multi-trait personality prediction (e.g., Big Five: OCEAN). Includes its own data loader, training loop, validation split, and evaluation metrics.
 
-## Citation:
+## Citation
 ````
 @article{heydari2025hyperpersona,
   title={Hyper Persona: A Multi-Level Hypergraph Framework for Text-Based Personality Prediction},
