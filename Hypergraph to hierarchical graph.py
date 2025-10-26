@@ -4,7 +4,7 @@ import torch
 import numpy as np
 from typing import List, Tuple, Dict
 
-def convert_hypergraph_to_hierarchical_graph_with_embeddings(
+def hypergraph_to_hierarchical(
     H: hnx.Hypergraph
 ) -> nx.Graph:
     """
