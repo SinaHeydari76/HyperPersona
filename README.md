@@ -3,11 +3,11 @@
 Hyper Persona is a research framework that models the multi-level structure of written-text (document, sentence, and word) using hypergraph and hierarchical graph representations.
 It integrates transformer-based graph learning to predict personality traits from text, capturing both semantic and syntactic relationships in a unified model.
 
-### Multi-Level Segmentation
+## Multi-Level Segmentation
 
 Splits text into document → sentence → word hierarchy usesing NLP preprocessing (spaCy) for syntactic and lexical segmentation.
 
-# Multi-Level Vectorization
+### Multi-Level Vectorization
 
 Generates embeddings for texual components using BERT to for graph construction.
 
