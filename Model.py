@@ -9,10 +9,6 @@ Components:
     Part 2: Model Definition
     Part 3: Utility Functions
     Part 4: Training Loop
-    Part 5: Data Loading and Preprocessing
-    Part 6: Stratified Data Split and Conversion to PyG
-    Part 7: Model Initialization and Training
-    Part 8: Final Evaluation on Test Set
 """
 
 import dill
@@ -268,94 +264,3 @@ def train(model, train_loader, test_loader, optimizer, criterion, epochs=30, sav
         torch.save(best_state_dict, save_path)
 
     return best_epoch
-
-
-# %% ==============================================================
-# === Part 5: Data Loading and Preprocessing ===
-# ==============================================================
-### Load precomputed hierarchical embeddings ###
-with open('gtconv data.pkl', 'rb') as f:
-    data = dill.load(f)
-
-# Experiment parameters
-numepochs = 30
-num_labels = 1
-batchsize = 8
-test_size = 0.2
-random_state = 42
-
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-
-# %% ==============================================================
-# === Part 6: Stratified Data Split and Conversion to PyG ===
-# ==============================================================
-### Stratified splits maintain label balance ###
-sss_outer = StratifiedShuffleSplit(n_splits=1, test_size=test_size, random_state=random_state)
-indices = np.arange(len(graphs))
-train_val_idx, test_idx = next(sss_outer.split(indices, labels_array))
-
-# Inner split for validation
-val_size = 0.10
-sss_inner = StratifiedShuffleSplit(n_splits=1, test_size=val_size, random_state=random_state)
-train_idx, val_idx = next(sss_inner.split(train_val_idx, labels_array[train_val_idx]))
-
-# Subset data
-train_graphs = [graphs[i] for i in train_idx]
-val_graphs = [graphs[i] for i in val_idx]
-test_graphs = [graphs[i] for i in test_idx]
-
-train_labels = [labels[i] for i in train_idx]
-val_labels = [labels[i] for i in val_idx]
-test_labels = [labels[i] for i in test_idx]
-
-# Convert to PyG format
-train_data = convert_nx_to_pyg(train_graphs, train_labels)
-val_data = convert_nx_to_pyg(val_graphs, val_labels)
-test_data = convert_nx_to_pyg(test_graphs, test_labels)
-
-# Input dimension
-in_channels = train_data[0].x.size(1)
-
-# Handle class imbalance
-all_labels_tensor = torch.stack([d.y for d in train_data])
-pos_weight = ((len(all_labels_tensor) - all_labels_tensor.sum()) / (all_labels_tensor.sum() + 1e-6)).to(device)
-
-# Data loaders
-train_loader = DataLoader(train_data, batch_size=batchsize, shuffle=True, pin_memory=True)
-val_loader = DataLoader(val_data, batch_size=batchsize, shuffle=False, pin_memory=True)
-test_loader = DataLoader(test_data, batch_size=batchsize, shuffle=False, pin_memory=True)
-
-
-# %% ==============================================================
-# === Part 7: Model Initialization and Training ===
-# ==============================================================
-### Initialize model, optimizer, and loss ###
-model = TFConv(in_channels, num_labels=num_labels, dropout=0.2).to(device)
-model.apply(init_weights)
-optimizer = torch.optim.AdamW(model.parameters(), lr=3e-4, weight_decay=3e-4)
-criterion = torch.nn.BCEWithLogitsLoss(pos_weight=pos_weight)
-
-# Train model and save best version
-save_path = f'/best_model_{target_trait}.pth'
-best_epoch = train(model, train_loader, val_loader, optimizer, criterion, epochs=numepochs, save_path=save_path)
-
-
-# %% ==============================================================
-# === Part 8: Final Evaluation on Test Set ===
-# ==============================================================
-### Load best model and report metrics ###
-final_model = TFConv(in_channels, num_labels=num_labels, dropout=0).to(device)
-final_model.load_state_dict(torch.load(save_path))
-final_metrics = evaluate(final_model, test_loader, criterion, deterministic=True)
-
-print("\nFinal Test Results:")
-print(f"  Best Epoch: {best_epoch}")
-print(f"  Accuracy: {final_metrics['accuracy']:.2%}")
-print(f"  Precision: {final_metrics['precision']:.2%}")
-print(f"  Recall: {final_metrics['recall']:.2%}")
-print(f"  F1: {final_metrics['f1']:.2%}")
-
-# Cleanup
-import gc
-gc.collect()
